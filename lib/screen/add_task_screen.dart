@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import 'package:todo_app/helpers/database_helper.dart';
+import 'package:todo_app/models/task_models.dart';
+
 class AddTaskScreen extends StatefulWidget {
-  const AddTaskScreen({Key key}) : super(key: key);
+  final Task task;
+  final Function updateTaskList;
+  AddTaskScreen({this.task, this.updateTaskList});
 
   @override
   _AddTaskScreenState createState() => _AddTaskScreenState();
@@ -21,6 +26,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   @override
   void initState() {
     super.initState();
+
+    if (widget.task != null) {
+      _title = widget.task.title;
+      _date = widget.task.date;
+      _priority = widget.task.priority;
+    }
+
     _dateController.text = _dateFormat.format(_date);
   }
 
@@ -51,9 +63,26 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       print('$_title, $_date, $_priority');
 
       // Insert the task to our user's database
+      Task task = Task(title: _title, date: _date, priority: _priority);
+      if (widget.task == null) {
+        task.status = 0;
+        DatabaseHelper.instance.insertTask(task);
+      } else {
+        task.id = widget.task.id;
+        task.status = widget.task.status;
+        DatabaseHelper.instance.updateTask(task);
+      }
+
       // Update the task
+      widget.updateTaskList();
       Navigator.pop(context);
     }
+  }
+
+  _delete() {
+    DatabaseHelper.instance.deleteTask(widget.task.id);
+    widget.updateTaskList();
+    Navigator.pop(context);
   }
 
   @override
@@ -77,7 +106,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 ),
                 SizedBox(height: 20),
                 Text(
-                  'Add Task',
+                  widget.task == null ? 'Add Task' : 'Update Task',
                   style: TextStyle(
                     color: Colors.black,
                     fontSize: 40,
@@ -174,11 +203,33 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       _submit();
                     },
                     child: Text(
-                      'Add',
+                      widget.task == null ? 'Add' : 'Update',
                       style: TextStyle(color: Colors.white, fontSize: 20),
                     ),
                   ),
-                )
+                ),
+                SizedBox(
+                  height: 20,
+                ),
+                widget.task != null
+                    ? Container(
+                        height: 60,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).primaryColor,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: TextButton(
+                          onPressed: () {
+                            _delete();
+                          },
+                          child: Text(
+                            'Delete',
+                            style: TextStyle(color: Colors.white, fontSize: 20),
+                          ),
+                        ),
+                      )
+                    : SizedBox.shrink(),
               ],
             ),
           ),
